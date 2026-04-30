@@ -1,0 +1,10 @@
+spacy
+pandas
+pyarrow
+tqdm
+protobuf
+sentencepiece
+geoopt
+openpyxl
+matplotlib
+scikit-learn
