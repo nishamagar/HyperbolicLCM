@@ -14,13 +14,13 @@ CHUNK_TOK_LEN = 256
 
 SEQ_LEN = 8
 
-STRIDE  = 2 # <-- was 2
+STRIDE  = 2 
 
 VAL_DOC_FRAC = 0.30
 SEED = 42
 
-MAX_TRAIN_WINDOWS_PER_DOC = 200   # try 50–200; smaller => more docs, less repetition
-MAX_VAL_WINDOWS_PER_DOC   = 50    # smaller => val uses more docs
+MAX_TRAIN_WINDOWS_PER_DOC = 200   
+MAX_VAL_WINDOWS_PER_DOC   = 50    
 
 WRITE_CHUNK_ROWS = 4096
 
@@ -87,15 +87,9 @@ def build_windows_for_docs(
     stride: int,
     max_windows_per_doc: Optional[int],
 ) -> List[Tuple[int, int]]:
-    """
-    Build (doc_id, start) windows where each window uses (SEQ_LEN+1) concept vectors:
-      x = positions [start .. start+SEQ_LEN-1]
-      y = positions [start+1 .. start+SEQ_LEN]
-    """
     windows: List[Tuple[int, int]] = []
     need = SEQ_LEN + 1
 
-    # Deterministic order by doc_id helps reproducibility
     for doc_id in sorted(doc_lengths.keys()):
         if doc_id not in allowed_docs:
             continue
