@@ -14,65 +14,50 @@ from tqdm import tqdm
 from torch import amp
 import pyarrow.parquet as pq
 
-from h_lcm1_Copy1 import HyperbolicLCM
+from h_lcm import HyperbolicLCM
 from sequence_dataset import SequenceParquetDataset
-
-
-# ============================================================
-# CONFIG
-# ============================================================
 
 @dataclass
 class TrainConfig:
-    # Data
     train_path: str = "wikitext_train_sequences.parquet"
     val_path: str = "wikitext_val_sequences.parquet"
     normalizer_path: str = "normalizer.pt"
 
-    # Output
     out_dir: str = "runs/hyperbolic_cluster"
     metrics_csv: str = "metrics.csv"
     summary_json: str = "summary.json"
     milestones_csv: str = "milestones.csv"
 
-    # Checkpointing
     save_every_opt_steps: int = 1000
     keep_last_k_checkpoints: int = 2
     save_best: bool = True
     save_optimizer_in_periodic: bool = False
     save_optimizer_in_best: bool = False
 
-    # Budgeting
     token_budget: int = 70_000_000
     seq_len: int = 8
     concept_tok_len: int = 256
 
-    # Training
     batch_size: int = 8
     grad_accum_steps: int = 4
     num_workers: int = 8
 
-    # Validation
     val_batch_size: int = 32
     val_workers: int = 4
     val_max_batches: int = 100
     eval_every_opt_steps: int = 50
 
-    # Optim
     lr: float = 5e-5
     weight_decay: float = 0.01
     grad_clip: float = 1.0
     use_bf16: bool = True
 
-    # Cluster-only loss
     clustering_loss_weight: float = 1.0
     clustering_loss_margin: float = 1.0
 
-    # Negative mining
-    negative_mode: str = "mixed"   # mixed | hardest | shuffle | roll
-    mixed_hard_ratio: float = 0.5  # fraction using hardest negatives
+    negative_mode: str = "mixed"   
+    mixed_hard_ratio: float = 0.5  
 
-    # Model
     in_dim: int = 768
     model_dim: int = 4096
     num_heads: int = 32
@@ -82,23 +67,16 @@ class TrainConfig:
     manifold_c: float = 0.002
     causal: bool = True
 
-    # Logging
     progress_every_opt_steps: int = 10
     milestone_tokens: Tuple[int, ...] = (0, 10_000_000, 30_000_000, 50_000_000, 70_000_000)
 
-    # Metadata
     model_name: str = "HyperbolicLCM-ClusterOnly-Mixed"
     seed: int = 42
     prefer_gpu_index: int = 0
 
-    # Reporting
     target_val0_report: float = 12.623
     loss_report_scale: float = 1.0
 
-
-# ============================================================
-# UTILS
-# ============================================================
 
 def pick_device(i: int) -> torch.device:
     if not torch.cuda.is_available():
@@ -224,10 +202,6 @@ def prune_old_checkpoints(ckpt_dir: str, keep_last_k: int):
             pass
 
 
-# ============================================================
-# NEGATIVE MINING
-# ============================================================
-
 def make_negatives_simple(targs: torch.Tensor, mode: str) -> torch.Tensor:
     N = targs.size(0)
     if N <= 1:
@@ -267,11 +241,6 @@ def select_mixed_negatives(
     pos: torch.Tensor,
     hard_ratio: float,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Mixed negatives:
-      - some examples use hardest negatives
-      - the rest use shuffled negatives
-    """
     N = anchors.size(0)
     if N <= 1:
         d_pos = manifold.dist(anchors, pos)
@@ -288,11 +257,6 @@ def select_mixed_negatives(
     d_neg = torch.where(use_hard, d_neg_hard, d_neg_shuffle)
 
     return neg, d_neg
-
-
-# ============================================================
-# CLUSTER LOSS ONLY
-# ============================================================
 
 def clustering_loss_inbatch(
     model: HyperbolicLCM,
@@ -408,10 +372,6 @@ def evaluate_cluster(
 
     return {k: (v / n_batches) for k, v in sums.items()}
 
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main():
     cfg = TrainConfig()
