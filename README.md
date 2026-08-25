@@ -8,21 +8,11 @@ H-LCM extends Large Concept Models from Euclidean space to the **Poincaré ball 
 
 ## Core Architecture
 
-```text
-Concept Embeddings
-        ↓
-Euclidean → Hyperbolic Projection
-        ↓
-Hyperbolic Transformer Layers
-        ↓
-Tangent-Space Multi-Head Attention
-        ↓
-Möbius Residual Updates
-        ↓
-Hyperbolic Feed-Forward Network
-        ↓
-Final Hyperbolic Representation
-```
+H-LCM performs concept-level reasoning in the **Poincaré ball** to better represent hierarchical relationships.
+
+Euclidean concept embeddings are first projected into hyperbolic space. The model then applies **tangent-space multi-head attention** and a **hyperbolic feed-forward network**, while **Möbius residual updates** preserve the manifold geometry.
+
+Training uses a **margin-based hyperbolic clustering objective** that pulls related concepts closer and pushes unrelated concepts farther apart.
 
 The model operates in the **Poincaré ball** and uses Geoopt-based hyperbolic operations such as logarithmic/exponential maps, Möbius addition, projection, and manifold distance. 
 
