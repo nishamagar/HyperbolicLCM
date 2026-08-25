@@ -4,7 +4,6 @@ import torch.nn.functional as F
 
 
 def _clamp_tangent(u: torch.Tensor, max_norm: float) -> torch.Tensor:
-    """Clamp tangent vectors by norm over last dim."""
     if max_norm is None or max_norm <= 0:
         return u
     n = u.norm(dim=-1, keepdim=True).clamp_min(1e-8)
@@ -13,15 +12,6 @@ def _clamp_tangent(u: torch.Tensor, max_norm: float) -> torch.Tensor:
 
 
 class HyperbolicMultiHeadAttention(nn.Module):
-    """
-    Stable "hyperbolic transformer" attention:
-      - Treat inputs as points on manifold
-      - Logmap0 -> tangent
-      - Standard dot-product attention in tangent
-      - Output tangent -> expmap0 -> projx (manifold point)
-
-    This avoids expmap(q/k) + hyperbolic dist2 attention, which is often unstable.
-    """
     def __init__(
         self,
         manifold,
@@ -31,7 +21,7 @@ class HyperbolicMultiHeadAttention(nn.Module):
         causal: bool = False,
         qk_max_norm: float = 2.0,
         out_max_norm: float = 2.0,
-        dist2_clip: float = None,  # kept for compatibility; not used
+        dist2_clip: float = None,  
     ):
         super().__init__()
         assert embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
@@ -58,11 +48,6 @@ class HyperbolicMultiHeadAttention(nn.Module):
         return self.manifold.projx(x)
 
     def forward(self, x: torch.Tensor, attention_mask: torch.Tensor = None) -> torch.Tensor:
-        """
-        x: [B,S,D] points on Poincare ball
-        attention_mask: [B,S] with 1=keep, 0=mask (optional)
-        returns: [B,S,D] points on Poincare ball
-        """
         B, S, D = x.shape
         H, Hd = self.num_heads, self.head_dim
 
@@ -86,7 +71,6 @@ class HyperbolicMultiHeadAttention(nn.Module):
             mask = attention_mask[:, None, None, :].to(dtype=torch.bool)
             attn_scores = attn_scores.masked_fill(~mask, torch.finfo(attn_scores.dtype).min)
 
-        # Optional causal mask
         if self.causal:
             causal = torch.tril(torch.ones(S, S, device=x.device, dtype=torch.bool))
             attn_scores = attn_scores.masked_fill(~causal[None, None], torch.finfo(attn_scores.dtype).min)
