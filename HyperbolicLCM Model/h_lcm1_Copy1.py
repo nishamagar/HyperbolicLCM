@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from geoopt.manifolds import PoincareBall
-from hyperbolic_attention_Copy1 import HyperbolicMultiHeadAttention
+from hyperbolic_attention import HyperbolicMultiHeadAttention
 
 
 def _clamp_tangent(u: torch.Tensor, max_norm: float) -> torch.Tensor:
@@ -13,7 +13,6 @@ def _clamp_tangent(u: torch.Tensor, max_norm: float) -> torch.Tensor:
 
 
 class TangentLayerNorm(nn.Module):
-    """LayerNorm in tangent space, then expmap0 + projx."""
     def __init__(self, dim, manifold, eps=1e-5):
         super().__init__()
         self.manifold = manifold
@@ -27,10 +26,6 @@ class TangentLayerNorm(nn.Module):
 
 
 class HyperbolicFeedForward(nn.Module):
-    """
-    FFN in tangent space:
-      logmap0 -> MLP -> clamp -> expmap0 -> projx
-    """
     def __init__(self, model_dim, manifold, ffn_mult=4, dropout=0.1, out_max_norm: float = 2.0):
         super().__init__()
         self.manifold = manifold
@@ -50,14 +45,6 @@ class HyperbolicFeedForward(nn.Module):
 
 
 class HyperbolicTransformerLayer(nn.Module):
-    """
-    Stable hyperbolic layer:
-      - norm in tangent
-      - attention/ff produce manifold points
-      - residual via Möbius addition
-      - residual update computed in tangent@0 then expmap0
-      - projx after updates
-    """
     def __init__(
         self,
         model_dim,
@@ -102,7 +89,7 @@ class HyperbolicTransformerLayer(nn.Module):
         return self.manifold.projx(x)
 
     def forward(self, x):
-        # ---- Attention block ----
+        # Attention block
         h = self.norm1(x)
         a = self.attn(h)  # manifold point
 
@@ -114,7 +101,7 @@ class HyperbolicTransformerLayer(nn.Module):
         x = self.manifold.mobius_add(x, da)
         x = self.manifold.projx(x)
 
-        # ---- FFN block ----
+        # FFN block
         h = self.norm2(x)
         f = self.ff(h)  # manifold point
 
