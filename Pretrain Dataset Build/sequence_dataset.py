@@ -6,15 +6,6 @@ from torch.utils.data import Dataset
 
 
 class SequenceParquetDataset(Dataset):
-    """
-    Expects parquet schema:
-      x: FixedSizeList(float32)[SEQ_LEN*D]
-      y: FixedSizeList(float32)[SEQ_LEN*D]
-
-    Returns:
-      x: torch.float32 [SEQ_LEN, D]
-      y: torch.float32 [SEQ_LEN, D]
-    """
 
     def __init__(
         self,
@@ -37,7 +28,6 @@ class SequenceParquetDataset(Dataset):
         if debug_schema:
             print("[SequenceParquetDataset] schema:", schema)
 
-        # ---- schema checks ----
         names = set(schema.names)
         for c in self.columns:
             if c not in names:
@@ -56,7 +46,6 @@ class SequenceParquetDataset(Dataset):
         total_rows = int(self.pf.metadata.num_rows)
         self._len = min(int(max_rows), total_rows) if max_rows is not None else total_rows
 
-        # Row-group offsets
         self.rg_counts = [int(self.pf.metadata.row_group(i).num_rows) for i in range(self.pf.num_row_groups)]
         self.rg_offsets = []
         s = 0
@@ -64,10 +53,9 @@ class SequenceParquetDataset(Dataset):
             self.rg_offsets.append(s)
             s += n
 
-        # Cache one row-group
         self._cache_rg = None
-        self._cache_x = None  # np.float32 [N, flat_len]
-        self._cache_y = None  # np.float32 [N, flat_len]
+        self._cache_x = None  
+        self._cache_y = None  
 
     def __len__(self):
         return self._len
@@ -87,14 +75,11 @@ class SequenceParquetDataset(Dataset):
         raise IndexError(idx)
 
     def _fixed_list_to_2d(self, col, nrows: int) -> np.ndarray:
-        # ChunkedArray -> Array
         if isinstance(col, pa.ChunkedArray):
             col = col.combine_chunks()
 
-        # FixedSizeListArray values are flat float array length nrows*flat_len
         flat = col.values.to_numpy(zero_copy_only=False).astype(np.float32, copy=False)
 
-        # Make contiguous explicitly (safe for torch.from_numpy zero-copy)
         out = np.ascontiguousarray(flat.reshape((nrows, self.flat_len)), dtype=np.float32)
         return out
 
