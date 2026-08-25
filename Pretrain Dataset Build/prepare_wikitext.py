@@ -22,8 +22,8 @@ SHARD_MAX_ROWS = 200_000
 SHARD_PREFIX = "shard"
 ROW_GROUP_SIZE = 50_000
 
-DOC_CHUNKS = 128  # <-- was 1024; try 128 (or 64) for more docs
-MAX_PENDING_CHUNKS_IN_RAM = 4096  # safety
+DOC_CHUNKS = 128  
+MAX_PENDING_CHUNKS_IN_RAM = 4096  
 
 
 def pick_device():
@@ -246,11 +246,9 @@ def preprocess_wikitext():
 
         add_text(text)
 
-        # Flush doc when it reaches DOC_CHUNKS chunks
         if len(cur_chunks) >= DOC_CHUNKS:
             flush_doc()
 
-        # safety
         if len(cur_chunks) >= MAX_PENDING_CHUNKS_IN_RAM:
             flush_doc()
 
